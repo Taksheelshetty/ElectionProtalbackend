@@ -8,16 +8,14 @@ const corsOptions = {
   origin: "http://localhost:3000",
 };
 
-// Create Express app
 const app = express();
-const port = 3001; // Change the port to 3001 to match the frontend configuration
+const port = 3001;
 
 app.use(cors(corsOptions));
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 app.use(cookieParser());
 
-// MySQL Connection
 const config = mysql.createConnection({
   host: "localhost",
   user: "root",
@@ -78,7 +76,7 @@ app.get("/CreateTables", async (req, res) => {
         VoteID int AUTO_INCREMENT unique not null,
         UserID int not null,
         CandidateID int not null,
-        time Time not null,
+        time varchar(50) not null,
         constraint pk4 primary key (VoteID),
         constraint fk6 foreign key(UserID) references Student(UserID),
         constraint fk7 foreign key(CandidateID) references Candidate(CandidateID)
@@ -228,9 +226,58 @@ app.post("/Candidateregisteration", (req, res) => {
   }
 });
 
-app.post("/castVote",(req,res)=>{
-  
-})
+app.post("/castVote", (req, res) => {
+  const { UserID, CandidateID } = req.body;
+  const date = new Date().toISOString();
+  const insertQuery = `
+    INSERT INTO VoteBank (UserID, CandidateID, time)
+    VALUES (?, ?, ?);
+  `;
+
+  const updateStudentQuery = `
+    UPDATE Student SET VoteCasted = '1' WHERE UserID = ?;
+  `;
+
+  const updateCandidateQuery = `
+    UPDATE Candidate 
+    SET VoteCount = (SELECT COUNT(CandidateID) FROM VoteBank WHERE CandidateID = ?)
+    WHERE CandidateID = ?;
+  `;
+
+  const values = [UserID, CandidateID, date];
+
+  try {
+    config.query(insertQuery, values, (error, results, fields) => {
+      if (error) {
+        console.error("Error inserting vote:", error);
+        res.status(500).send("Error casting vote.");
+      } else {
+        config.query(updateStudentQuery, [UserID], (error, results, fields) => {
+          if (error) {
+            console.error("Error updating student:", error);
+            res.status(500).send("Error casting vote.");
+          } else {
+            config.query(
+              updateCandidateQuery,
+              [CandidateID, CandidateID],
+              (error, results, fields) => {
+                if (error) {
+                  console.error("Error updating candidate:", error);
+                  res.status(500).send("Error casting vote.");
+                } else {
+                  res.status(200).send("Vote casted successfully.");
+                }
+              }
+            );
+          }
+        });
+      }
+    });
+  } catch (error) {
+    console.error("Error casting vote:", error);
+    res.status(500).send("Error casting vote.");
+  }
+});
 
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
