@@ -1,4 +1,4 @@
-const config= require('../utlils/db');
+const config = require("../utlils/db");
 
 const CreateTables = async (req, res) => {
   try {
@@ -11,6 +11,14 @@ const CreateTables = async (req, res) => {
           constraint pk1 primary key(BranchID)
         );
       `);
+    await config.query(`
+      CREATE TABLE IF NOT EXISTS ElectionTimeTable(
+        ElectionID int AUTO_INCREMENT unique not null, 
+        ElectionName varchar(50),
+        ElectionDescription varchar(100),
+        constraint pk7 primary key(ElectionID)
+      );
+    `);
 
     await config.query(`
         CREATE TABLE IF NOT EXISTS Student(

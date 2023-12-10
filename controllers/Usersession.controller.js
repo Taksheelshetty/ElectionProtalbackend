@@ -13,11 +13,11 @@ const register = async (req, res) => {
 
     config.query(queryString, values, (error, results, fields) => {
       if (error) {
-        console.error("Error registering user:", error);
-        res.status(500).send("Error registering user.");
+        console.error("User Already Exists:", error);
+        res.status(500).send("Error.");
       } else {
-        res.cookie("user", UserName, { maxAge: 1800000, httpOnly: true });
-        res.send("User registered successfully.");
+        // res.cookie("user", UserName, { maxAge: 1800000, httpOnly: true });
+        res.status(200).send("User registered successfully.");
       }
     });
   } catch (err) {
@@ -64,11 +64,25 @@ const login = async (req, res) => {
 
 const sendInfo = (req, res) => {
   const userInfo = req.cookies.user;
+
   console.log(userInfo);
   if (userInfo != undefined) {
     try {
-      console.log(userInfo);
-      res.status(200).send(userInfo);
+      console.log(userInfo[0].BranchID);
+      const query = `
+        SELECT BranchName FROM branch WHERE BranchID = ${userInfo[0].BranchID};
+      `;
+      config.query(query, (error, results, fields) => {
+        if (error) {
+          console.error("Error connecting to sever:", error);
+          res.status(500).send("Error connecting to sever.");
+        } else {
+          console.log(results[0].BranchName);
+          userInfo[0].BranchName = results[0].BranchName;
+          console.log(userInfo);
+          res.status(200).send(userInfo);
+        }
+      });
     } catch {
       console.log(err);
       res.status(500).send("Internal error");
@@ -88,6 +102,19 @@ const logout = (req, res) => {
   } catch {
     res.status(500).send("Error");
   }
+};
+
+const UpcomingElection = (req, res) => {
+  const query = `SELECT * FROM electiontimetable`;
+  config.query(query, (error, results, fields) => {
+    if (error) {
+      console.error("Error getting upcoming election:", error);
+      res.status(500).send("Error getting upcoming election.");
+    } else {
+      res.status(200).send(results);
+      console.log(results);
+    }
+  });
 };
 
 const castVote = (req, res) => {
@@ -114,7 +141,7 @@ const castVote = (req, res) => {
     config.query(insertQuery, values, (error, results, fields) => {
       if (error) {
         console.error("Already Casted");
-        res.status(200).send("Vote has been ALreaday Casted ");
+        res.status(200).send("Vote has been Already Casted ");
       } else {
         config.query(updateStudentQuery, [UserID], (error, results, fields) => {
           if (error) {
@@ -149,4 +176,5 @@ module.exports = {
   sendInfo,
   register,
   castVote,
+  UpcomingElection,
 };
